@@ -30,7 +30,9 @@ ENV/
 .AppleDouble
 .LSOverride
 
-# 大型输出文件（可选：如果你想上传结果图片和CSV，可以注释掉这些）
-# *.png
-# *.csv
-# *.gexf
+# 输出文件 - 只保留代码文件
+*.png
+*.csv
+*.txt
+*.gexf
+*.pdf
