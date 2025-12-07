@@ -1,0 +1,36 @@
+# 数据目录（太大，不需要上传）
+x-24-us-election/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# 环境变量
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 大型输出文件（可选：如果你想上传结果图片和CSV，可以注释掉这些）
+# *.png
+# *.csv
+# *.gexf
