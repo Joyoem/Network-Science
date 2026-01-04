@@ -162,7 +162,7 @@ def build_network(df, retweets):
     print(f"Isolated nodes: {nx.number_of_isolates(G):,}")
     
     return G
-
+# ----------------------------------------------------------
 def analyze_network(G):
     """
     Performs structural analysis on the constructed network.
@@ -300,7 +300,7 @@ def analyze_network(G):
 
     print("\n" + sep_line)
 
-
+#------------------------------------------------------------------
 
 def export_network(G, parts_config):
     if len(parts_config) == 1:
@@ -381,4 +381,5 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
