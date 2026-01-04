@@ -164,12 +164,143 @@ def build_network(df, retweets):
     return G
 
 def analyze_network(G):
+    """
+    Performs structural analysis on the constructed network.
+    Compatible with both DiGraph and MultiDiGraph.
+    """
+    sep_line = "-" * 60 
     
-    in_deg = dict(G.in_degree())
-    out_deg = dict(G.out_degree())
+    print("\n" + sep_line)
+    print("PHASE 2: NETWORK STRUCTURE ANALYSIS (Topology)")
+    print(sep_line)
+
+
+    # preprocessing
+    if G.is_multigraph():
+        G_simple = nx.DiGraph(G) 
+    else:
+        G_simple = G
+
+    # 1. Basic Overview
+    num_nodes = G.number_of_nodes()
+    num_edges = G.number_of_edges()
     
-    print(f"In-degree: avg={np.mean(list(in_deg.values())):.2f}, max={max(in_deg.values()):,}")
-    print(f"Out-degree: avg={np.mean(list(out_deg.values())):.2f}, max={max(out_deg.values()):,}")
+    density = nx.density(G_simple)
+    reciprocity = nx.reciprocity(G_simple)
+    
+    print(f"[1] Network Overview")
+    print(f"    - Nodes (Users)        : {num_nodes:,}")
+    print(f"    - Edges (Interactions) : {num_edges:,}")
+    print(f"    - Network Density      : {density:.6e}")
+    print(f"    - Reciprocity          : {reciprocity:.4f}")
+
+    # 2. Degree Analysis
+    print(f"\n[2] Degree Analysis")
+    # degree = Total Retweets
+    in_degrees = [d for n, d in G.in_degree()]
+    out_degrees = [d for n, d in G.out_degree()]
+
+    avg_in = np.mean(in_degrees)
+    max_in = np.max(in_degrees)
+    avg_out = np.mean(out_degrees)
+    max_out = np.max(out_degrees)
+
+    print(f"    - Avg In-Degree (Influence) : {avg_in:.2f} (Max: {max_in:,})")
+    print(f"    - Avg Out-Degree (Activity) : {avg_out:.2f} (Max: {max_out:,})")
+
+    try:
+        plt.figure(figsize=(12, 5))
+        
+        plt.subplot(1, 2, 1)
+        bins_in = np.logspace(np.log10(1), np.log10(max_in+1), 50)
+        plt.hist(in_degrees, bins=bins_in, alpha=0.7, color='#1f77b4', log=True)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.title('In-Degree Distribution (Influence)')
+        plt.xlabel('Degree (k)')
+        plt.ylabel('Frequency P(k)')
+        
+        plt.subplot(1, 2, 2)
+        bins_out = np.logspace(np.log10(1), np.log10(max_out+1), 50)
+        plt.hist(out_degrees, bins=bins_out, alpha=0.7, color='#ff7f0e', log=True)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.title('Out-Degree Distribution (Activity)')
+        plt.xlabel('Degree (k)')
+        
+        plt.tight_layout()
+        plt.savefig(f"{OUTPUT_PREFIX}_degree_dist.png")
+        print(f"    -> Plot saved: {OUTPUT_PREFIX}_degree_dist.png")
+        plt.close()
+    except Exception as e:
+        print(f"    -> Plotting failed: {e}")
+
+    # 3. Path Length Analysis
+
+    print(f"\n[3] Path Length Analysis")
+    if num_nodes > 0:
+        scc = list(nx.strongly_connected_components(G_simple))
+        largest_scc = max(scc, key=len)
+        
+        if 1 < len(largest_scc) < 3000:
+            sub_g = G_simple.subgraph(largest_scc)
+            avg_path = nx.average_shortest_path_length(sub_g)
+            print(f"    - Avg Path Length : {avg_path:.4f} (Calculated on largest connected subgraph)")
+        else:
+            print(f"    - Avg Path Length : Skipped (Graph is too fragmented or too large)")
+
+
+    # 4. Clustering Analysis
+    print(f"\n[4] Clustering Analysis")
+    try:
+        # G_simple is essential
+        transitivity = nx.transitivity(G_simple)
+        print(f"    - Transitivity (Global) : {transitivity:.6f}")
+    except Exception as e:
+        print(f"    - Transitivity calculation failed: {e}")
+
+
+    # 5. Assortativity Analysis
+    
+    print(f"\n[5] Assortativity Analysis")
+    try:
+        # Assortativity support MultiGraph
+        r = nx.degree_assortativity_coefficient(G)
+        print(f"    - Degree Assortativity  : {r:.4f}")
+    except:
+        print("    - Assortativity calculation failed.")
+
+    
+    # 6. Centrality Analysis (Top 10) 
+    print(f"\n[6] Centrality Analysis (Top 10)")
+    
+    top_in_degree = sorted(G.in_degree(), key=lambda x: x[1], reverse=True)[:10]
+    print("\n    [Most Retweeted Users (In-Degree)]")
+    for i, (user, deg) in enumerate(top_in_degree, 1):
+        print(f"    {i:2d}. User {user:<20} : {deg}")
+
+    print("\n    [Calculating PageRank...]")
+    try:
+        pr = nx.pagerank(G, alpha=0.85)
+        top_pr = sorted(pr.items(), key=lambda x: x[1], reverse=True)[:10]
+        print("    [Top Authority Users (PageRank)]")
+        for i, (user, score) in enumerate(top_pr, 1):
+            print(f"    {i:2d}. User {user:<20} : {score:.6f}")
+            
+        with open(f"{OUTPUT_PREFIX}_centrality_results.txt", "w") as f:
+            f.write("Rank,Type,User_ID,Score\n")
+            for i, (u, s) in enumerate(top_pr, 1):
+                f.write(f"{i},PageRank,{u},{s}\n")
+            for i, (u, s) in enumerate(top_in_degree, 1):
+                f.write(f"{i},InDegree,{u},{s}\n")
+        print(f"    -> Centrality results saved to {OUTPUT_PREFIX}_centrality_results.txt")
+        
+    except Exception as e:
+        print(f"    -> PageRank failed: {e}")
+
+    print("\n" + sep_line)
+
+
 
 def export_network(G, parts_config):
     if len(parts_config) == 1:
@@ -248,4 +379,5 @@ def main():
     print(f"Done. Time: {elapsed/60:.1f} min")
 
 if __name__ == "__main__":
+
     main()
